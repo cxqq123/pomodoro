@@ -1,0 +1,683 @@
+/* ==========================================================================
+   番茄时钟 —— 样式
+   阶段主题色通过 <body data-phase="focus|short|long"> 切换
+   ========================================================================== */
+
+:root {
+  --bg: #14101a;
+  --bg-soft: #1d1725;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f4f1f8;
+  --text-dim: #a49cb4;
+  --text-faint: #7a7288;
+
+  --accent: #ff6b5b;
+  --accent-2: #ff9f43;
+
+  --radius: 20px;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+  --ring-size: 320px;
+  --ring-circumference: 892.21; /* 2 * π * 142 */
+}
+
+body[data-phase='short'] {
+  --accent: #34d399;
+  --accent-2: #22d3ee;
+}
+
+body[data-phase='long'] {
+  --accent: #818cf8;
+  --accent-2: #38bdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(16px, 4vw, 40px) 16px calc(28px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(120% 90% at 15% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+    radial-gradient(110% 80% at 100% 100%, color-mix(in oklab, var(--accent-2) 18%, transparent), transparent 55%),
+    linear-gradient(170deg, var(--bg-soft), var(--bg) 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  transition: background 600ms ease;
+}
+
+/* 背景柔光，随时间缓慢呼吸 */
+.glow {
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--accent) 26%, transparent), transparent 42%);
+  opacity: 0.75;
+  filter: blur(30px);
+  animation: breathe 9s ease-in-out infinite;
+  transition: background 600ms ease;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.app {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 3vh, 30px);
+}
+
+/* ---------------------------------------------------------------- 顶栏 -- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.brand__tomato {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 4px 14px color-mix(in oklab, var(--accent) 60%, transparent));
+}
+
+/* --------------------------------------------------------- 通用按钮 -- */
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--surface-strong);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+.icon-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.icon-btn--ghost:hover {
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------- 模式切换 -- */
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.mode {
+  padding: 9px 6px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 160ms ease, background 200ms ease, box-shadow 200ms ease;
+}
+
+.mode:hover { color: var(--text-dim); }
+
+.mode[aria-selected='true'] {
+  color: #17121d;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+/* ------------------------------------------------------------- 表盘 -- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.5vh, 24px);
+}
+
+.dial {
+  position: relative;
+  width: min(var(--ring-size), 78vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.ring__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 14;
+}
+
+.ring__progress {
+  fill: none;
+  stroke: url(#ringGradient);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: var(--ring-circumference);
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 12px color-mix(in oklab, var(--accent) 55%, transparent));
+}
+
+.dial__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.dial__phase {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dial__time {
+  margin: 0;
+  font-size: clamp(3.4rem, 15vw, 4.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  text-shadow: 0 10px 40px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.dial__hint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-faint);
+}
+
+body.is-running .dial__time {
+  color: #fff;
+}
+
+/* ------------------------------------------------------------- 控制区 -- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 20px);
+}
+
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 168px;
+  height: 58px;
+  padding: 0 30px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #17121d;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px color-mix(in oklab, var(--accent) 38%, transparent);
+  transition: transform 160ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+.primary-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.primary-btn__icon--pause,
+.primary-btn__icon--play {
+  display: block;
+}
+
+/* 运行时显示暂停图标 */
+.primary-btn__icon--pause { display: none; }
+body.is-running .primary-btn__icon--play { display: none; }
+body.is-running .primary-btn__icon--pause { display: block; }
+
+/* --------------------------------------------------------------- 进度 -- */
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.meta__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dots {
+  display: flex;
+  gap: 7px;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border);
+  transition: background 260ms ease, transform 260ms ease, box-shadow 260ms ease;
+}
+
+.dot.is-filled {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  transform: scale(1.12);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.meta__count {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}
+
+.meta__count strong {
+  font-size: 1.05rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task__label {
+  flex: none;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.task__input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.task__input::placeholder { color: var(--text-faint); }
+
+.task__input:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.32);
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+/* ------------------------------------------------------------- 快捷键 -- */
+
+.shortcuts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.shortcuts__sep { opacity: 0.5; }
+
+kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------- 面板 -- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(8, 6, 12, 0.6);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.scrim.is-open { opacity: 1; }
+
+.panel {
+  position: fixed;
+  z-index: 21;
+  top: 50%;
+  left: 50%;
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(86vh, 780px);
+  overflow-y: auto;
+  background: linear-gradient(170deg, #241d2e, #1a1523);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%) scale(0.96);
+  opacity: 0;
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.panel.is-open {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 12px;
+}
+
+.panel__head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 20px 22px;
+}
+
+.field-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-group legend {
+  padding: 0 0 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.field small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.field--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.field--row input { width: 84px; }
+
+.field input[type='number'] {
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.field input[type='number']:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.switches {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch__track {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  transition: background 200ms ease;
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.switch input:checked + .switch__track {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.switch input:checked + .switch__track .switch__thumb {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + .switch__track {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.switch__text small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.panel__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.text-btn {
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.text-btn:hover { color: var(--text); background: var(--surface-strong); }
+
+.text-btn--accent {
+  color: color-mix(in oklab, var(--accent) 80%, white);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.panel__note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------- toast -- */
+
+.toast {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  padding: 11px 20px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: rgba(30, 24, 40, 0.94);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.toast.is-open {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* --------------------------------------------------------------- 无障碍 -- */
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .primary-btn { min-width: 140px; height: 54px; padding: 0 22px; }
+  .task { flex-direction: column; align-items: stretch; gap: 8px; }
+  .shortcuts { display: none; }
+}

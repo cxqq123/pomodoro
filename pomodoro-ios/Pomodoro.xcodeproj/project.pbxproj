@@ -1,0 +1,353 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	objectVersion = 70;
+	classes = {
+	};
+	objects = {
+
+/* Begin PBXProject section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+			};
+			buildConfigurationList = AAAAAAAAAAAAAAAAAAAAAAAA001A /* Build configuration list for PBXProject "Pomodoro" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = AAAAAAAAAAAAAAAAAAAAAAAA0002;
+			productRefGroup = AAAAAAAAAAAAAAAAAAAAAAAA0003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0008 /* Pomodoro */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0009 /* PomodoroTests */,
+			);
+			targetAttributes = {
+				AAAAAAAAAAAAAAAAAAAAAAAA0008 = {
+					CreatedOnToolsVersion = 26.0;
+				};
+				AAAAAAAAAAAAAAAAAAAAAAAA0009 = {
+					CreatedOnToolsVersion = 26.0;
+					TestTargetID = AAAAAAAAAAAAAAAAAAAAAAAA0008;
+				};
+			};
+		};
+/* End PBXProject section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0006 /* Pomodoro */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Pomodoro;
+			sourceTree = "<group>";
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0007 /* PomodoroTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PomodoroTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFileReference section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0004 /* Pomodoro.app */ = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfb;
+			includeInIndex = 0;
+			path = Pomodoro.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0005 /* PomodoroTests.xctest */ = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfb;
+			includeInIndex = 0;
+			path = PomodoroTests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0002 = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0006 /* Pomodoro */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0007 /* PomodoroTests */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0004 /* Pomodoro.app */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0005 /* PomodoroTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0008 /* Pomodoro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAAAAAAAAAAAAAAAAAAAAAA0018 /* Build configuration list for PBXNativeTarget "Pomodoro" */;
+			buildPhases = (
+				AAAAAAAAAAAAAAAAAAAAAAAA000A /* Sources */,
+				AAAAAAAAAAAAAAAAAAAAAAAA000B /* Frameworks */,
+				AAAAAAAAAAAAAAAAAAAAAAAA000C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0006 /* Pomodoro */,
+			);
+			name = Pomodoro;
+			packageProductDependencies = (
+			);
+			platform = iOS;
+			productName = Pomodoro;
+			productReference = AAAAAAAAAAAAAAAAAAAAAAAA0004 /* Pomodoro.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0009 /* PomodoroTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAAAAAAAAAAAAAAAAAAAAAA0019 /* Build configuration list for PBXNativeTarget "PomodoroTests" */;
+			buildPhases = (
+				AAAAAAAAAAAAAAAAAAAAAAAA000D /* Sources */,
+				AAAAAAAAAAAAAAAAAAAAAAAA000E /* Frameworks */,
+				AAAAAAAAAAAAAAAAAAAAAAAA000F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0010 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0007 /* PomodoroTests */,
+			);
+			name = PomodoroTests;
+			packageProductDependencies = (
+			);
+			platform = iOS;
+			productName = PomodoroTests;
+			productReference = AAAAAAAAAAAAAAAAAAAAAAAA0005 /* PomodoroTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXBuildPhase section */
+		AAAAAAAAAAAAAAAAAAAAAAAA000A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA000B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA000C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA000D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA000E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA000F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AAAAAAAAAAAAAAAAAAAAAAAA0008 /* Pomodoro */;
+			targetProxy = AAAAAAAAAAAAAAAAAAAAAAAA0011 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0011 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AAAAAAAAAAAAAAAAAAAAAAAA0001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AAAAAAAAAAAAAAAAAAAAAAAA0008;
+			remoteInfo = Pomodoro;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin XCBuildConfiguration section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0012 /* Project Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = ( "DEBUG=1", "$(inherited)" );
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0013 /* Project Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0014 /* Pomodoro Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "番茄时钟";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks" );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mico.pomodoro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0015 /* Pomodoro Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "番茄时钟";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks" );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mico.pomodoro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0016 /* PomodoroTests Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks" );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mico.pomodoro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pomodoro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pomodoro";
+			};
+			name = Debug;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0017 /* PomodoroTests Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks" );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mico.pomodoro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pomodoro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pomodoro";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AAAAAAAAAAAAAAAAAAAAAAAA0018 /* Build configuration list for PBXNativeTarget "Pomodoro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0014 /* Debug */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA0019 /* Build configuration list for PBXNativeTarget "PomodoroTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0016 /* Debug */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0017 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AAAAAAAAAAAAAAAAAAAAAAAA001A /* Build configuration list for PBXProject "Pomodoro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAAAAAAAAAAAAAAAAAA0012 /* Debug */,
+				AAAAAAAAAAAAAAAAAAAAAAAA0013 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AAAAAAAAAAAAAAAAAAAAAAAA0001 /* Project object */;
+}

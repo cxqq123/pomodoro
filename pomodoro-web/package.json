@@ -1,0 +1,19 @@
+{
+  "name": "pomodoro-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "一个零依赖、可离线使用的番茄时钟网页应用",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node tools/build-single.mjs",
+    "start": "node tools/serve.mjs",
+    "test": "node --test \"tests/*.test.js\"",
+    "pretest:browser": "npm run build",
+    "test:browser": "node tools/run-selftest.mjs",
+    "test:all": "npm test && npm run test:browser",
+    "test:screenshots": "node tools/run-selftest.mjs --screenshots screenshots"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

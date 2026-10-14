@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<!-- 单文件版：由 tools/build-single.mjs 从 index.html / styles.css / timer-core.js / app.js 生成，勿直接修改 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#141018" />
+  <meta name="description" content="一个干净、专注的番茄时钟：专注 25 分钟，休息 5 分钟，自动循环并记录你的番茄数。" />
+  <title>番茄时钟 · Pomodoro</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%85%3C/text%3E%3C/svg%3E" />
+  <style>
+/* ==========================================================================
+   番茄时钟 —— 样式
+   阶段主题色通过 <body data-phase="focus|short|long"> 切换
+   ========================================================================== */
+
+:root {
+  --bg: #14101a;
+  --bg-soft: #1d1725;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f4f1f8;
+  --text-dim: #a49cb4;
+  --text-faint: #7a7288;
+
+  --accent: #ff6b5b;
+  --accent-2: #ff9f43;
+
+  --radius: 20px;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+  --ring-size: 320px;
+  --ring-circumference: 892.21; /* 2 * π * 142 */
+}
+
+body[data-phase='short'] {
+  --accent: #34d399;
+  --accent-2: #22d3ee;
+}
+
+body[data-phase='long'] {
+  --accent: #818cf8;
+  --accent-2: #38bdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(16px, 4vw, 40px) 16px calc(28px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(120% 90% at 15% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+    radial-gradient(110% 80% at 100% 100%, color-mix(in oklab, var(--accent-2) 18%, transparent), transparent 55%),
+    linear-gradient(170deg, var(--bg-soft), var(--bg) 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  transition: background 600ms ease;
+}
+
+/* 背景柔光，随时间缓慢呼吸 */
+.glow {
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--accent) 26%, transparent), transparent 42%);
+  opacity: 0.75;
+  filter: blur(30px);
+  animation: breathe 9s ease-in-out infinite;
+  transition: background 600ms ease;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.app {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 3vh, 30px);
+}
+
+/* ---------------------------------------------------------------- 顶栏 -- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.brand__tomato {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 4px 14px color-mix(in oklab, var(--accent) 60%, transparent));
+}
+
+/* --------------------------------------------------------- 通用按钮 -- */
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--surface-strong);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+.icon-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.icon-btn--ghost:hover {
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------- 模式切换 -- */
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.mode {
+  padding: 9px 6px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 160ms ease, background 200ms ease, box-shadow 200ms ease;
+}
+
+.mode:hover { color: var(--text-dim); }
+
+.mode[aria-selected='true'] {
+  color: #17121d;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+/* ------------------------------------------------------------- 表盘 -- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.5vh, 24px);
+}
+
+.dial {
+  position: relative;
+  width: min(var(--ring-size), 78vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.ring__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 14;
+}
+
+.ring__progress {
+  fill: none;
+  stroke: url(#ringGradient);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: var(--ring-circumference);
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 12px color-mix(in oklab, var(--accent) 55%, transparent));
+}
+
+.dial__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.dial__phase {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dial__time {
+  margin: 0;
+  font-size: clamp(3.4rem, 15vw, 4.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  text-shadow: 0 10px 40px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.dial__hint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-faint);
+}
+
+body.is-running .dial__time {
+  color: #fff;
+}
+
+/* ------------------------------------------------------------- 控制区 -- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 20px);
+}
+
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 168px;
+  height: 58px;
+  padding: 0 30px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #17121d;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px color-mix(in oklab, var(--accent) 38%, transparent);
+  transition: transform 160ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+.primary-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.primary-btn__icon--pause,
+.primary-btn__icon--play {
+  display: block;
+}
+
+/* 运行时显示暂停图标 */
+.primary-btn__icon--pause { display: none; }
+body.is-running .primary-btn__icon--play { display: none; }
+body.is-running .primary-btn__icon--pause { display: block; }
+
+/* --------------------------------------------------------------- 进度 -- */
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.meta__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dots {
+  display: flex;
+  gap: 7px;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border);
+  transition: background 260ms ease, transform 260ms ease, box-shadow 260ms ease;
+}
+
+.dot.is-filled {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  transform: scale(1.12);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.meta__count {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}
+
+.meta__count strong {
+  font-size: 1.05rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task__label {
+  flex: none;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.task__input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.task__input::placeholder { color: var(--text-faint); }
+
+.task__input:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.32);
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+/* ------------------------------------------------------------- 快捷键 -- */
+
+.shortcuts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.shortcuts__sep { opacity: 0.5; }
+
+kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------- 面板 -- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(8, 6, 12, 0.6);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.scrim.is-open { opacity: 1; }
+
+.panel {
+  position: fixed;
+  z-index: 21;
+  top: 50%;
+  left: 50%;
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(86vh, 780px);
+  overflow-y: auto;
+  background: linear-gradient(170deg, #241d2e, #1a1523);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%) scale(0.96);
+  opacity: 0;
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.panel.is-open {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 12px;
+}
+
+.panel__head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 20px 22px;
+}
+
+.field-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-group legend {
+  padding: 0 0 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.field small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.field--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.field--row input { width: 84px; }
+
+.field input[type='number'] {
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.field input[type='number']:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.switches {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch__track {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  transition: background 200ms ease;
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.switch input:checked + .switch__track {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.switch input:checked + .switch__track .switch__thumb {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + .switch__track {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.switch__text small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.panel__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.text-btn {
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.text-btn:hover { color: var(--text); background: var(--surface-strong); }
+
+.text-btn--accent {
+  color: color-mix(in oklab, var(--accent) 80%, white);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.panel__note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------- toast -- */
+
+.toast {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  padding: 11px 20px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: rgba(30, 24, 40, 0.94);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.toast.is-open {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* --------------------------------------------------------------- 无障碍 -- */
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .primary-btn { min-width: 140px; height: 54px; padding: 0 22px; }
+  .task { flex-direction: column; align-items: stretch; gap: 8px; }
+  .shortcuts { display: none; }
+}
+  </style>
+</head>
+<body data-phase="focus">
+  <div class="glow" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <h1 class="brand">
+        <span class="brand__tomato" aria-hidden="true">🍅</span>
+        <span class="brand__text">番茄时钟</span>
+      </h1>
+      <button type="button" id="settingsBtn" class="icon-btn" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.7 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.7h.09A1.7 1.7 0 0 0 10.12 3.14V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.15 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <nav class="modes" role="tablist" aria-label="计时模式">
+      <button type="button" class="mode" role="tab" data-phase="focus" aria-selected="true">专注</button>
+      <button type="button" class="mode" role="tab" data-phase="short" aria-selected="false">短休息</button>
+      <button type="button" class="mode" role="tab" data-phase="long" aria-selected="false">长休息</button>
+    </nav>
+
+    <main class="stage">
+      <div class="dial">
+        <svg class="ring" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" />
+              <stop offset="100%" stop-color="var(--accent-2)" />
+            </linearGradient>
+          </defs>
+          <!-- fill="none" 作为表现属性写死：万一样式表没加载，也不会退化成一个黑色实心圆 -->
+          <circle class="ring__track" cx="160" cy="160" r="142" fill="none"></circle>
+          <circle class="ring__progress" id="ringProgress" cx="160" cy="160" r="142" fill="none"></circle>
+        </svg>
+
+        <div class="dial__center">
+          <p class="dial__phase" id="phaseLabel">专注时间</p>
+          <p class="dial__time" id="timeDisplay" role="timer" aria-live="off">25:00</p>
+          <p class="dial__hint" id="phaseHint">该专注了</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" id="resetBtn" class="icon-btn icon-btn--ghost" aria-label="重置当前阶段（快捷键 R）">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 3.2-6.9"></path>
+            <path d="M3 4.5V10h5.5"></path>
+          </svg>
+        </button>
+
+        <button type="button" id="toggleBtn" class="primary-btn" aria-label="开始专注（快捷键 空格）">
+          <svg class="primary-btn__icon primary-btn__icon--play" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="currentColor">
+            <path d="M8 5.2c0-.9 1-1.5 1.8-1L18 11a1.2 1.2 0 0 1 0 2l-8.2 6.8c-.8.5-1.8-.1-1.8-1z"></path>
+          </svg>
+          <svg class="primary-btn__icon primary-btn__icon--pause" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="currentColor">
+            <rect x="7" y="5" width="3.6" height="14" rx="1.6"></rect>
+            <rect x="13.4" y="5" width="3.6" height="14" rx="1.6"></rect>
+          </svg>
+          <span class="primary-btn__text" id="toggleText">开始</span>
+        </button>
+
+        <button type="button" id="skipBtn" class="icon-btn icon-btn--ghost" aria-label="跳过当前阶段（快捷键 S）">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 5.5 13 12l-8 6.5z" fill="currentColor" stroke="none"></path>
+            <path d="M18 5v14"></path>
+          </svg>
+        </button>
+      </div>
+    </main>
+
+    <section class="meta" aria-label="进度">
+      <div class="meta__row">
+        <div class="dots" id="dots" role="img" aria-label="本周期番茄进度"></div>
+        <p class="meta__count">今天完成 <strong id="focusCount">0</strong> 个番茄</p>
+      </div>
+      <label class="task">
+        <span class="task__label">本轮目标</span>
+        <input type="text" id="taskInput" class="task__input" maxlength="60" placeholder="例如：写周报 / 复习第 3 章" autocomplete="off" />
+      </label>
+    </section>
+
+    <footer class="shortcuts">
+      <kbd>空格</kbd> 开始/暂停
+      <span class="shortcuts__sep">·</span>
+      <kbd>R</kbd> 重置
+      <span class="shortcuts__sep">·</span>
+      <kbd>S</kbd> 跳过
+      <span class="shortcuts__sep">·</span>
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 切换模式
+    </footer>
+  </div>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <section class="panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <header class="panel__head">
+      <h2 id="settingsTitle">设置</h2>
+      <button type="button" id="closeSettingsBtn" class="icon-btn icon-btn--ghost" aria-label="关闭设置">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+    </header>
+
+    <form class="panel__body" id="settingsForm">
+      <fieldset class="field-group">
+        <legend>时长（分钟）</legend>
+        <div class="grid-3">
+          <label class="field">
+            <span>专注</span>
+            <input type="number" id="focusMinutes" min="1" max="180" step="1" inputmode="numeric" />
+          </label>
+          <label class="field">
+            <span>短休息</span>
+            <input type="number" id="shortMinutes" min="1" max="60" step="1" inputmode="numeric" />
+          </label>
+          <label class="field">
+            <span>长休息</span>
+            <input type="number" id="longMinutes" min="1" max="120" step="1" inputmode="numeric" />
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="field field--row">
+        <span>长休息间隔<small>每完成几个番茄后长休息</small></span>
+        <input type="number" id="longBreakInterval" min="1" max="12" step="1" inputmode="numeric" />
+      </label>
+
+      <div class="switches">
+        <label class="switch">
+          <input type="checkbox" id="autoStartBreaks" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">专注结束后自动开始休息</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="autoStartFocus" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">休息结束后自动开始专注</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="soundEnabled" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">阶段结束提示音</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="notifyEnabled" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">桌面通知<small id="notifyHint"></small></span>
+        </label>
+      </div>
+
+      <div class="panel__actions">
+        <button type="button" class="text-btn" id="resetStatsBtn">清空统计</button>
+        <button type="button" class="text-btn text-btn--accent" id="restoreDefaultsBtn">恢复默认</button>
+      </div>
+      <p class="panel__note">所有设置与进度只保存在这台设备的浏览器里，不会上传。</p>
+    </form>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script>
+/**
+ * 番茄时钟 —— 纯逻辑核心。
+ *
+ * 该文件不依赖 DOM，可在浏览器（挂载到 window.PomodoroCore）
+ * 或 Node（module.exports）中使用，因此核心状态机是可单元测试的。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.PomodoroCore = factory();
+  }
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var PHASES = ['focus', 'short', 'long'];
+
+  var DEFAULT_SETTINGS = {
+    focusMinutes: 25,
+    shortMinutes: 5,
+    longMinutes: 15,
+    longBreakInterval: 4,
+    autoStartBreaks: true,
+    autoStartFocus: false,
+    soundEnabled: true,
+    notifyEnabled: false
+  };
+
+  /**
+   * 把输入收敛到 [min, max] 的整数。
+   * 非数字（NaN / '' / 'abc'）回退到 fallback，越界值则夹到边界。
+   */
+  function toIntInRange(value, fallback, min, max) {
+    var n = Number(value);
+    if (!isFinite(n)) n = Number(fallback);
+    if (!isFinite(n)) n = min;
+    return Math.round(Math.min(max, Math.max(min, n)));
+  }
+
+  /** 把外部传入的设置规整成合法值，避免 NaN / 负数造成计时器异常。 */
+  function normalizeSettings(raw) {
+    var input = raw && typeof raw === 'object' ? raw : {};
+    var merged = {};
+    for (var key in DEFAULT_SETTINGS) {
+      if (Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, key)) {
+        merged[key] = Object.prototype.hasOwnProperty.call(input, key)
+          ? input[key]
+          : DEFAULT_SETTINGS[key];
+      }
+    }
+    return {
+      focusMinutes: toIntInRange(merged.focusMinutes, DEFAULT_SETTINGS.focusMinutes, 1, 180),
+      shortMinutes: toIntInRange(merged.shortMinutes, DEFAULT_SETTINGS.shortMinutes, 1, 60),
+      longMinutes: toIntInRange(merged.longMinutes, DEFAULT_SETTINGS.longMinutes, 1, 120),
+      longBreakInterval: toIntInRange(merged.longBreakInterval, DEFAULT_SETTINGS.longBreakInterval, 1, 12),
+      autoStartBreaks: Boolean(merged.autoStartBreaks),
+      autoStartFocus: Boolean(merged.autoStartFocus),
+      soundEnabled: Boolean(merged.soundEnabled),
+      notifyEnabled: Boolean(merged.notifyEnabled)
+    };
+  }
+
+  function phaseDurationMs(phase, settings) {
+    var s = normalizeSettings(settings);
+    var minutes =
+      phase === 'short' ? s.shortMinutes :
+      phase === 'long' ? s.longMinutes :
+      s.focusMinutes;
+    return minutes * 60 * 1000;
+  }
+
+  function createState(settings, now) {
+    var s = normalizeSettings(settings);
+    return {
+      phase: 'focus',
+      durationMs: phaseDurationMs('focus', s),
+      remainingMs: phaseDurationMs('focus', s),
+      running: false,
+      endAt: null,
+      focusDone: 0,
+      startedAt: typeof now === 'number' ? now : Date.now()
+    };
+  }
+
+  /** 当前剩余毫秒数（运行中按真实时钟推算，暂停时返回冻结值）。 */
+  function remainingMs(state, now) {
+    if (!state) return 0;
+    if (!state.running || typeof state.endAt !== 'number') {
+      return Math.max(0, state.remainingMs);
+    }
+    return Math.max(0, state.endAt - now);
+  }
+
+  function start(state, now) {
+    if (state.running) return state;
+    var left = Math.max(0, state.remainingMs);
+    if (left <= 0) return state;
+    return Object.assign({}, state, {
+      running: true,
+      endAt: now + left,
+      remainingMs: left
+    });
+  }
+
+  function pause(state, now) {
+    if (!state.running) return state;
+    return Object.assign({}, state, {
+      running: false,
+      endAt: null,
+      remainingMs: remainingMs(state, now)
+    });
+  }
+
+  function toggle(state, now) {
+    return state.running ? pause(state, now) : start(state, now);
+  }
+
+  function reset(state, settings) {
+    var s = normalizeSettings(settings);
+    return Object.assign({}, state, {
+      durationMs: phaseDurationMs(state.phase, s),
+      remainingMs: phaseDurationMs(state.phase, s),
+      running: false,
+      endAt: null
+    });
+  }
+
+  function switchPhase(state, phase, settings) {
+    if (PHASES.indexOf(phase) === -1) return state;
+    var s = normalizeSettings(settings);
+    var duration = phaseDurationMs(phase, s);
+    return Object.assign({}, state, {
+      phase: phase,
+      durationMs: duration,
+      remainingMs: duration,
+      running: false,
+      endAt: null
+    });
+  }
+
+  /**
+   * 休息结束后回到专注；专注结束后按 longBreakInterval 决定长/短休息。
+   */
+  function nextPhase(state, settings) {
+    var s = normalizeSettings(settings);
+    if (state.phase !== 'focus') return 'focus';
+    return state.focusDone > 0 && state.focusDone % s.longBreakInterval === 0
+      ? 'long'
+      : 'short';
+  }
+
+  function shouldAutoStart(phase, settings) {
+    var s = normalizeSettings(settings);
+    return phase === 'focus' ? s.autoStartFocus : s.autoStartBreaks;
+  }
+
+  /**
+   * 推进状态机。
+   * @returns {{state: object, completed: null|object}}
+   *   completed 不为 null 时表示刚刚结束一个阶段。
+   */
+  function tick(state, now, settings) {
+    if (!state.running) return { state: state, completed: null };
+    if (now < state.endAt) {
+      return {
+        state: Object.assign({}, state, { remainingMs: Math.max(0, state.endAt - now) }),
+        completed: null
+      };
+    }
+
+    var finishedPhase = state.phase;
+    var focusDone = state.focusDone + (finishedPhase === 'focus' ? 1 : 0);
+    var settled = Object.assign({}, state, { focusDone: focusDone });
+    var upcoming = nextPhase(settled, settings);
+    var advanced = switchPhase(settled, upcoming, settings);
+
+    if (shouldAutoStart(upcoming, settings)) {
+      advanced = start(advanced, now);
+    }
+
+    return {
+      state: advanced,
+      completed: {
+        phase: finishedPhase,
+        next: upcoming,
+        focusDone: focusDone,
+        autoStarted: advanced.running
+      }
+    };
+  }
+
+  /** 跳过当前阶段：不计入完成统计，直接切到「下一阶段」。 */
+  function skip(state, settings) {
+    var upcoming = state.phase === 'focus'
+      ? nextPhase(state, settings)
+      : 'focus';
+    return switchPhase(state, upcoming, settings);
+  }
+
+  /**
+   * 把「当前周期」的完成进度映射成圆点状态。
+   * @returns {{total:number, filled:number}}
+   */
+  function cycleDots(state, settings) {
+    var s = normalizeSettings(settings);
+    var total = s.longBreakInterval;
+    var done = state.focusDone;
+    var filled = done % total;
+    if (done > 0 && filled === 0) filled = total;
+    return { total: total, filled: filled };
+  }
+
+  function formatTime(ms) {
+    var totalSeconds = Math.ceil(Math.max(0, ms) / 1000);
+    var minutes = Math.floor(totalSeconds / 60);
+    var seconds = totalSeconds % 60;
+    return (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+  }
+
+  /** 进度 0~1：0 表示刚开始（满环），1 表示已结束（空环）。 */
+  function progress(state, now) {
+    var total = state.durationMs || 0;
+    if (total <= 0) return 1;
+    var left = remainingMs(state, now);
+    return Math.min(1, Math.max(0, 1 - left / total));
+  }
+
+  var PHASE_TEXT = {
+    focus: { name: '专注时间', verb: '该专注了', emoji: '🍅' },
+    short: { name: '短休息', verb: '起来伸个懒腰', emoji: '☕️' },
+    long: { name: '长休息', verb: '好好休息一下', emoji: '🌿' }
+  };
+
+  function serialize(state) {
+    return {
+      phase: state.phase,
+      durationMs: state.durationMs,
+      remainingMs: state.remainingMs,
+      running: state.running,
+      endAt: state.endAt,
+      focusDone: state.focusDone
+    };
+  }
+
+  /**
+   * 从 localStorage 恢复。若关闭页面期间计时已经结束，
+   * 这里只结算这一个阶段（不会连锁自动开始），并把下一阶段置为暂停。
+   */
+  function restore(raw, settings, now) {
+    var s = normalizeSettings(settings);
+    if (!raw || typeof raw !== 'object' || PHASES.indexOf(raw.phase) === -1) {
+      return { state: createState(s, now), completed: null };
+    }
+
+    var focusDone = Math.max(0, Math.floor(Number(raw.focusDone) || 0));
+    var base = {
+      phase: raw.phase,
+      durationMs: Math.max(1, Number(raw.durationMs) || phaseDurationMs(raw.phase, s)),
+      remainingMs: Math.max(0, Number(raw.remainingMs) || 0),
+      running: Boolean(raw.running),
+      endAt: typeof raw.endAt === 'number' ? raw.endAt : null,
+      focusDone: focusDone
+    };
+
+    if (base.running && base.endAt === null) base.running = false;
+
+    if (base.running && now >= base.endAt) {
+      var result = tick(base, now, s);
+      if (result.completed) {
+        // 回来时不要自动接续，让用户自己决定。
+        result.state = Object.assign({}, result.state, { running: false, endAt: null });
+      }
+      return result;
+    }
+
+    if (base.running) {
+      base.remainingMs = Math.max(0, base.endAt - now);
+    }
+    return { state: base, completed: null };
+  }
+
+  return {
+    PHASES: PHASES,
+    PHASE_TEXT: PHASE_TEXT,
+    DEFAULT_SETTINGS: DEFAULT_SETTINGS,
+    normalizeSettings: normalizeSettings,
+    phaseDurationMs: phaseDurationMs,
+    createState: createState,
+    remainingMs: remainingMs,
+    start: start,
+    pause: pause,
+    toggle: toggle,
+    reset: reset,
+    switchPhase: switchPhase,
+    nextPhase: nextPhase,
+    tick: tick,
+    skip: skip,
+    cycleDots: cycleDots,
+    formatTime: formatTime,
+    progress: progress,
+    serialize: serialize,
+    restore: restore
+  };
+});
+  </script>
+  <script>
+/**
+ * 番茄时钟 —— 界面与交互（依赖 timer-core.js 提供的纯逻辑）
+ */
+(function () {
+  'use strict';
+
+  var core = window.PomodoroCore;
+  var STORAGE_KEY = 'pomodoro-web:v1';
+
+  var els = {
+    toggleBtn: document.getElementById('toggleBtn'),
+    toggleText: document.getElementById('toggleText'),
+    resetBtn: document.getElementById('resetBtn'),
+    skipBtn: document.getElementById('skipBtn'),
+    ring: document.getElementById('ringProgress'),
+    time: document.getElementById('timeDisplay'),
+    phaseLabel: document.getElementById('phaseLabel'),
+    phaseHint: document.getElementById('phaseHint'),
+    modes: Array.prototype.slice.call(document.querySelectorAll('.mode')),
+    dots: document.getElementById('dots'),
+    focusCount: document.getElementById('focusCount'),
+    taskInput: document.getElementById('taskInput'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    panel: document.getElementById('settingsPanel'),
+    scrim: document.getElementById('scrim'),
+    closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+    resetStatsBtn: document.getElementById('resetStatsBtn'),
+    restoreDefaultsBtn: document.getElementById('restoreDefaultsBtn'),
+    notifyHint: document.getElementById('notifyHint'),
+    toast: document.getElementById('toast'),
+    form: document.getElementById('settingsForm'),
+    numbers: {
+      focusMinutes: document.getElementById('focusMinutes'),
+      shortMinutes: document.getElementById('shortMinutes'),
+      longMinutes: document.getElementById('longMinutes'),
+      longBreakInterval: document.getElementById('longBreakInterval')
+    },
+    toggles: {
+      autoStartBreaks: document.getElementById('autoStartBreaks'),
+      autoStartFocus: document.getElementById('autoStartFocus'),
+      soundEnabled: document.getElementById('soundEnabled'),
+      notifyEnabled: document.getElementById('notifyEnabled')
+    }
+  };
+
+  var RING_CIRCUMFERENCE = 2 * Math.PI * Number(els.ring.getAttribute('r'));
+
+  var settings = core.normalizeSettings(core.DEFAULT_SETTINGS);
+  var state = core.createState(settings);
+  var stats = { date: todayKey(), count: 0 };
+  var lastPaint = { time: null, phase: null, running: null, progress: -1, dots: null };
+  var toastTimer = null;
+  var closeTimer = null;
+  var audioCtx = null;
+
+  /* ------------------------------------------------------------ 存储 -- */
+
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+
+  function load() {
+    var raw;
+    try {
+      raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    } catch (err) {
+      raw = null;
+    }
+    if (!raw || typeof raw !== 'object') return;
+
+    settings = core.normalizeSettings(Object.assign({}, core.DEFAULT_SETTINGS, raw.settings));
+
+    var restored = core.restore(raw.timer, settings, Date.now());
+    state = restored.state;
+
+    if (raw.stats && raw.stats.date === todayKey()) {
+      stats = { date: raw.stats.date, count: Math.max(0, Math.floor(Number(raw.stats.count) || 0)) };
+    }
+
+    if (typeof raw.task === 'string') els.taskInput.value = raw.task;
+
+    if (restored.completed) {
+      // 页面关闭期间计时已结束：结算统计，但不连锁自动开始。
+      if (restored.completed.phase === 'focus') bumpToday();
+      setTimeout(function () {
+        toast('离开时「' + core.PHASE_TEXT[restored.completed.phase].name + '」已结束，继续加油 👋');
+      }, 400);
+    } else if (state.running) {
+      setTimeout(function () {
+        toast('已恢复上次未完成的计时 ▶');
+      }, 400);
+    }
+  }
+
+  function save() {
+    var payload = {
+      v: 1,
+      settings: settings,
+      timer: core.serialize(state),
+      stats: stats,
+      task: els.taskInput.value.slice(0, 60)
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {
+      /* 隐私模式下可能无法写入，忽略即可 */
+    }
+  }
+
+  /* ------------------------------------------------------------ 音效 -- */
+
+  function ensureAudio() {
+    if (audioCtx) return audioCtx;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    try {
+      audioCtx = new Ctx();
+    } catch (err) {
+      audioCtx = null;
+    }
+    return audioCtx;
+  }
+
+  /** 用振荡器合成一小段提示音，避免依赖任何外部音频文件。 */
+  function playChime(kind) {
+    if (!settings.soundEnabled) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+
+    // 专注结束：向上两音；休息结束：向下两音，便于用耳朵区分
+    var notes = kind === 'focus' ? [660, 990] : [880, 587];
+    var start = ctx.currentTime + 0.02;
+
+    notes.forEach(function (freq, i) {
+      var t = start + i * 0.22;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.28, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.45);
+    });
+  }
+
+  /* ---------------------------------------------------------- 通知 -- */
+
+  function updateNotifyHint() {
+    if (!('Notification' in window)) {
+      els.notifyHint.textContent = '当前浏览器不支持，或页面未通过 https 打开';
+      els.toggles.notifyEnabled.disabled = true;
+      return;
+    }
+    var p = Notification.permission;
+    els.notifyHint.textContent =
+      p === 'granted' ? '已授权' :
+      p === 'denied' ? '已被浏览器拒绝，请在地址栏权限里重新允许' :
+      '首次开启时会向浏览器申请权限';
+  }
+
+  function notify(title, body) {
+    if (!settings.notifyEnabled) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      var n = new Notification(title, { body: body, tag: 'pomodoro', silent: true });
+      setTimeout(function () { n.close(); }, 8000);
+    } catch (err) {
+      /* file:// 下部分浏览器会抛错，忽略 */
+    }
+  }
+
+  /* ----------------------------------------------------------- toast -- */
+
+  function toast(message, ms) {
+    els.toast.textContent = message;
+    els.toast.hidden = false;
+    void els.toast.offsetWidth; // 强制重排，让过渡动画从初始状态开始
+    els.toast.classList.add('is-open');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      els.toast.classList.remove('is-open');
+      setTimeout(function () { els.toast.hidden = true; }, 260);
+    }, ms || 3200);
+  }
+
+  /* ------------------------------------------------------------ 渲染 -- */
+
+  function buildDots(total, filled) {
+    els.dots.innerHTML = '';
+    for (var i = 0; i < total; i += 1) {
+      var dot = document.createElement('span');
+      dot.className = 'dot' + (i < filled ? ' is-filled' : '');
+      els.dots.appendChild(dot);
+    }
+    els.dots.setAttribute('aria-label', '本周期番茄进度：' + filled + ' / ' + total);
+  }
+
+  function render(now, force) {
+    var text = core.PHASE_TEXT[state.phase];
+    var timeText = core.formatTime(core.remainingMs(state, now));
+    var progress = core.progress(state, now);
+    var dots = core.cycleDots(state, settings);
+    var dotsKey = dots.total + ':' + dots.filled;
+
+    if (force || timeText !== lastPaint.time) {
+      els.time.textContent = timeText;
+      document.title = (state.running ? timeText + ' · ' : '') + text.name + ' · 番茄时钟';
+      lastPaint.time = timeText;
+    }
+
+    if (force || state.phase !== lastPaint.phase) {
+      els.phaseLabel.textContent = text.name;
+      els.phaseHint.textContent = text.verb;
+      document.body.setAttribute('data-phase', state.phase);
+      els.modes.forEach(function (btn) {
+        btn.setAttribute('aria-selected', String(btn.dataset.phase === state.phase));
+      });
+      lastPaint.phase = state.phase;
+    }
+
+    if (force || state.running !== lastPaint.running) {
+      document.body.classList.toggle('is-running', state.running);
+      els.toggleBtn.setAttribute('aria-label', (state.running ? '暂停' : '开始') + text.name + '（快捷键 空格）');
+      els.toggleText.textContent = state.running ? '暂停' : '开始';
+      lastPaint.running = state.running;
+    }
+
+    if (force || Math.abs(progress - lastPaint.progress) > 0.0004) {
+      // 必须带单位：CSS 里 stroke-dashoffset 是 <length-percentage>，无单位的行内值会被忽略
+      els.ring.style.strokeDashoffset = (RING_CIRCUMFERENCE * progress).toFixed(2) + 'px';
+      lastPaint.progress = progress;
+    }
+
+    if (force || dotsKey !== lastPaint.dots) {
+      buildDots(dots.total, dots.filled);
+      lastPaint.dots = dotsKey;
+    }
+
+    if (force) els.focusCount.textContent = String(stats.count);
+  }
+
+  function bumpToday() {
+    var key = todayKey();
+    if (stats.date !== key) stats = { date: key, count: 0 };
+    stats.count += 1;
+    els.focusCount.textContent = String(stats.count);
+  }
+
+  /* ------------------------------------------------------- 主循环 -- */
+
+  function handleCompleted(completed) {
+    if (completed.phase === 'focus') bumpToday();
+
+    var finished = core.PHASE_TEXT[completed.phase];
+    var upcoming = core.PHASE_TEXT[completed.next];
+    var msg = finished.emoji + ' ' + finished.name + '结束';
+    if (completed.next === 'short') msg += '，去休息 ' + settings.shortMinutes + ' 分钟吧';
+    else if (completed.next === 'long') msg += '，进入 ' + settings.longMinutes + ' 分钟长休息';
+    else msg += '，回到专注';
+
+    playChime(completed.phase);
+    toast(msg, 4200);
+    notify(finished.emoji + ' ' + finished.name + '结束', '下一步：' + upcoming.name + (completed.autoStarted ? '（已自动开始）' : ''));
+
+    if (completed.autoStarted) els.toggleText.textContent = '暂停';
+    save();
+  }
+
+  /** 推进一次状态机；返回是否刚刚完成了某个阶段。 */
+  function step() {
+    if (!state.running) return false;
+    var result = core.tick(state, Date.now(), settings);
+    if (result.completed) {
+      state = result.state;
+      handleCompleted(result.completed);
+      return true;
+    }
+    if (result.state !== state) state = result.state;
+    return false;
+  }
+
+  function loop() {
+    step();
+    render(Date.now(), false);
+    requestAnimationFrame(loop);
+  }
+
+  /* ------------------------------------------------------ 用户操作 -- */
+
+  function toggle() {
+    ensureAudio();
+    var wasRunning = state.running;
+    // 极端情况下暂停时恰好走到 0，先补一个完整时长再开始
+    if (!wasRunning && core.remainingMs(state, Date.now()) <= 0) {
+      state = core.reset(state, settings);
+    }
+    state = core.toggle(state, Date.now());
+    if (wasRunning) {
+      toast('已暂停 ⏸');
+    } else {
+      toast(core.PHASE_TEXT[state.phase].emoji + ' 开始' + core.PHASE_TEXT[state.phase].name);
+    }
+    render(Date.now(), true);
+    save();
+  }
+
+  function resetTimer() {
+    state = core.reset(state, settings);
+    toast('已重置为 ' + core.formatTime(state.remainingMs));
+    render(Date.now(), true);
+    save();
+  }
+
+  function skipPhase() {
+    var from = state.phase;
+    state = core.skip(state, settings);
+    toast('跳过' + core.PHASE_TEXT[from].name + ' → ' + core.PHASE_TEXT[state.phase].name);
+    render(Date.now(), true);
+    save();
+  }
+
+  function setPhase(phase) {
+    if (phase === state.phase) return;
+    state = core.switchPhase(state, phase, settings);
+    render(Date.now(), true);
+    save();
+  }
+
+  /* ------------------------------------------------------- 设置面板 -- */
+
+  function syncForm() {
+    Object.keys(els.numbers).forEach(function (key) {
+      els.numbers[key].value = String(settings[key]);
+    });
+    Object.keys(els.toggles).forEach(function (key) {
+      els.toggles[key].checked = Boolean(settings[key]);
+    });
+    updateNotifyHint();
+  }
+
+  /** 修改时长后：若当前阶段还没开始计时就同步剩余时间，否则只夹紧不越界。 */
+  function applyDurationChange() {
+    var duration = core.phaseDurationMs(state.phase, settings);
+    var previous = state.durationMs;
+    state = Object.assign({}, state, { durationMs: duration });
+
+    if (!state.running) {
+      if (state.remainingMs >= previous || state.remainingMs > duration) {
+        state = Object.assign({}, state, { remainingMs: duration });
+      }
+    } else if (core.remainingMs(state, Date.now()) > duration) {
+      state = Object.assign({}, state, { endAt: Date.now() + duration });
+    }
+    render(Date.now(), true);
+    save();
+  }
+
+  function readNumberInput(input, key) {
+    var draft = Object.assign({}, settings);
+    draft[key] = input.value;
+    var value = core.normalizeSettings(draft)[key];
+    input.value = String(value);
+    settings[key] = value;
+    return value;
+  }
+
+  function openPanel() {
+    clearTimeout(closeTimer);
+    els.panel.hidden = false;
+    els.scrim.hidden = false;
+    void els.panel.offsetWidth; // 强制重排，保证入场过渡生效（不依赖 rAF）
+    els.panel.classList.add('is-open');
+    els.scrim.classList.add('is-open');
+    els.settingsBtn.setAttribute('aria-expanded', 'true');
+    var first = els.numbers.focusMinutes;
+    if (first) first.focus();
+  }
+
+  function closePanel() {
+    els.panel.classList.remove('is-open');
+    els.scrim.classList.remove('is-open');
+    els.settingsBtn.setAttribute('aria-expanded', 'false');
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(function () {
+      els.panel.hidden = true;
+      els.scrim.hidden = true;
+    }, 220);
+    els.settingsBtn.focus();
+  }
+
+  function toastConfirmResetStats() {
+    if (window.confirm('确定要清空统计吗？已完成番茄数与周期进度都会归零。')) {
+      stats = { date: todayKey(), count: 0 };
+      state = Object.assign({}, state, { focusDone: 0 });
+      render(Date.now(), true);
+      save();
+      toast('统计已清空');
+    }
+  }
+
+  /* -------------------------------------------------------- 事件绑定 -- */
+
+  els.toggleBtn.addEventListener('click', toggle);
+  els.resetBtn.addEventListener('click', resetTimer);
+  els.skipBtn.addEventListener('click', skipPhase);
+  els.modes.forEach(function (btn) {
+    btn.addEventListener('click', function () { setPhase(btn.dataset.phase); });
+  });
+
+  els.settingsBtn.addEventListener('click', openPanel);
+  els.closeSettingsBtn.addEventListener('click', closePanel);
+  els.scrim.addEventListener('click', closePanel);
+  els.resetStatsBtn.addEventListener('click', toastConfirmResetStats);
+
+  els.restoreDefaultsBtn.addEventListener('click', function () {
+    settings = core.normalizeSettings(core.DEFAULT_SETTINGS);
+    syncForm();
+    applyDurationChange();
+    toast('已恢复默认设置');
+  });
+
+  Object.keys(els.numbers).forEach(function (key) {
+    els.numbers[key].addEventListener('change', function () {
+      readNumberInput(els.numbers[key], key);
+      applyDurationChange();
+    });
+  });
+
+  els.toggles.autoStartBreaks.addEventListener('change', function () {
+    settings.autoStartBreaks = els.toggles.autoStartBreaks.checked;
+    save();
+  });
+
+  els.toggles.autoStartFocus.addEventListener('change', function () {
+    settings.autoStartFocus = els.toggles.autoStartFocus.checked;
+    save();
+  });
+
+  els.toggles.soundEnabled.addEventListener('change', function () {
+    settings.soundEnabled = els.toggles.soundEnabled.checked;
+    if (settings.soundEnabled) {
+      ensureAudio();
+      playChime('focus');
+    }
+    save();
+  });
+
+  els.toggles.notifyEnabled.addEventListener('change', function () {
+    var want = els.toggles.notifyEnabled.checked;
+    if (!want) {
+      settings.notifyEnabled = false;
+      save();
+      return;
+    }
+    if (!('Notification' in window)) {
+      els.toggles.notifyEnabled.checked = false;
+      toast('当前环境不支持桌面通知');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      settings.notifyEnabled = true;
+      updateNotifyHint();
+      save();
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      els.toggles.notifyEnabled.checked = false;
+      updateNotifyHint();
+      toast('通知权限被拒绝，请在浏览器站点设置里允许');
+      return;
+    }
+    Notification.requestPermission().then(function (permission) {
+      settings.notifyEnabled = permission === 'granted';
+      els.toggles.notifyEnabled.checked = settings.notifyEnabled;
+      updateNotifyHint();
+      toast(settings.notifyEnabled ? '已开启桌面通知' : '未获得通知权限');
+      save();
+    });
+  });
+
+  els.taskInput.addEventListener('input', save);
+
+  document.addEventListener('keydown', function (event) {
+    var tag = (event.target && event.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) return;
+
+    if (event.key === 'Escape' && !els.panel.hidden) {
+      closePanel();
+      return;
+    }
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      toggle();
+      return;
+    }
+    var key = event.key.toLowerCase();
+    if (key === 'r') { event.preventDefault(); resetTimer(); }
+    else if (key === 's') { event.preventDefault(); skipPhase(); }
+    else if (key === '1') setPhase('focus');
+    else if (key === '2') setPhase('short');
+    else if (key === '3') setPhase('long');
+  });
+
+  // 回到前台时立即补算流逝的时间
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      step();
+      render(Date.now(), true);
+    }
+  });
+
+  // 后台标签页里 rAF 会被节流甚至暂停，用定时器兜底保证计时与界面都不停摆
+  setInterval(function () {
+    step();
+    render(Date.now(), false);
+  }, 500);
+
+  window.addEventListener('beforeunload', save);
+
+  /* ------------------------------------------------------------ 启动 -- */
+
+  load();
+  syncForm();
+  render(Date.now(), true);
+  requestAnimationFrame(loop);
+})();
+  </script>
+</body>
+</html>

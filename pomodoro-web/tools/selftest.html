@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>番茄时钟 · 自检</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 18px;
+      font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #e8e4f0;
+      background: #14101a;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+    p.sub { margin: 0 0 14px; color: #8f87a0; font-size: 12px; }
+    #report { margin: 0; white-space: pre-wrap; }
+    .ok { color: #41d69b; }
+    .bad { color: #ff6b5b; font-weight: 700; }
+    .section { color: #b9aef0; }
+    .summary { font-weight: 700; }
+    #stage { width: 100%; height: 78vh; min-height: 560px; border: 1px solid #2c2436; border-radius: 14px; background: #14101a; }
+    /* 截图模式：iframe 铺满视口，隐藏报告 */
+    body.shot { padding: 0; overflow: hidden; }
+    body.shot h1, body.shot p.sub, body.shot #report { display: none; }
+    body.shot #stage { position: fixed; inset: 0; width: 100vw; height: 100vh; min-height: 0; border: 0; border-radius: 0; }
+  </style>
+</head>
+<body>
+  <h1>番茄时钟 · 浏览器自检</h1>
+  <p class="sub">在 iframe 中加载真实页面并驱动交互。直接打开本文件即可查看结果；<code>?scenario=running|break|settings</code> 用于截图。</p>
+  <pre id="report">运行中…</pre>
+  <iframe id="stage" title="被测页面"></iframe>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var params = new URLSearchParams(location.search);
+    var scenario = params.get('scenario');
+    // 默认测多文件版；?app=pomodoro.html 可以测单文件版（构建产物）
+    var APP_FILE = params.get('app') || 'index.html';
+    function appUrl(extra) { return '../' + APP_FILE + (extra ? '?' + extra : ''); }
+    var STORAGE_KEY = 'pomodoro-web:v1';
+
+    var report = document.getElementById('report');
+    var frame = document.getElementById('stage');
+    var pass = 0;
+    var fail = 0;
+    var lines = [];
+
+    window.__selftest = { done: false, pass: 0, fail: 0, lines: lines };
+
+    function emit(text, cls) {
+      lines.push(text);
+      var span = document.createElement('span');
+      span.className = cls || '';
+      span.textContent = text + '\n';
+      report.appendChild(span);
+    }
+
+    function section(name) { emit('\n' + name, 'section'); }
+
+    function check(name, condition, detail) {
+      var ok = Boolean(condition);
+      if (ok) pass += 1; else fail += 1;
+      if (!ok && detail === undefined) detail = '';
+      emit((ok ? '  \u2713 ' : '  \u2717 ') + name + (ok ? '' : ' \u2192 ' + detail), ok ? '' : 'bad');
+      window.__selftest.pass = pass;
+      window.__selftest.fail = fail;
+      return ok;
+    }
+
+    function wait(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function loadFrame(src) {
+      return new Promise(function (resolve) {
+        frame.onload = function () { setTimeout(resolve, 300); };
+        frame.src = src;
+      });
+    }
+
+    function $(sel) { return frame.contentWindow.document.querySelector(sel); }
+    function $$(sel) {
+      return Array.prototype.slice.call(frame.contentWindow.document.querySelectorAll(sel));
+    }
+
+    function fire(selector, type) {
+      $(selector).dispatchEvent(new frame.contentWindow.Event(type, { bubbles: true }));
+    }
+
+    function pressKey(key, code, vk) {
+      frame.contentWindow.document.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {
+        key: key, code: code, keyCode: vk, which: vk, bubbles: true, cancelable: true
+      }));
+      frame.contentWindow.document.dispatchEvent(new frame.contentWindow.KeyboardEvent('keyup', {
+        key: key, code: code, keyCode: vk, which: vk, bubbles: true, cancelable: true
+      }));
+    }
+
+    /**
+     * 让被测页面的 Date.now 快进（累加）。
+     * 无头浏览器用 --virtual-time-budget 时真实时钟不会推进，所以「时间流逝」
+     * 必须显式模拟；这同时让断言与真实耗时无关，跑得更稳。
+     */
+    function fastForward(ms) {
+      var D = frame.contentWindow.Date;
+      if (!D.__realNow) D.__realNow = D.now;
+      D.__offset = (D.__offset || 0) + ms;
+      D.now = function () { return D.__realNow.call(D) + D.__offset; };
+    }
+
+    function snapshot() {
+      var doc = frame.contentWindow.document;
+      var ring = doc.getElementById('ringProgress');
+      var circumference = 2 * Math.PI * Number(ring.getAttribute('r'));
+      return {
+        time: doc.getElementById('timeDisplay').textContent,
+        phase: doc.body.dataset.phase,
+        label: doc.getElementById('phaseLabel').textContent,
+        hint: doc.getElementById('phaseHint').textContent,
+        dots: doc.querySelectorAll('#dots .dot').length,
+        filled: doc.querySelectorAll('#dots .dot.is-filled').length,
+        count: doc.getElementById('focusCount').textContent,
+        running: doc.body.classList.contains('is-running'),
+        toggleText: doc.getElementById('toggleText').textContent,
+        title: doc.title,
+        // 计算值带单位（如 123.45px），必须用 parseFloat
+        ringOffset: parseFloat(frame.contentWindow.getComputedStyle(ring).strokeDashoffset) || 0,
+        toast: doc.getElementById('toast').textContent,
+        toastVisible: doc.getElementById('toast').hidden === false,
+        circumference: circumference
+      };
+    }
+
+    /** 开始当前阶段并快进到它结束（默认再快进一点确保跨过终点） */
+    async function completeCurrentPhase(minutes) {
+      $('#toggleBtn').click();
+      await wait(300);
+      fastForward((minutes + 1) * 60 * 1000);
+      await wait(1200); // 等页面自己的兜底定时器结算阶段
+      return snapshot();
+    }
+
+    /* ------------------------------------------------------ 截图场景模式 -- */
+
+    async function screenshotScenario(name) {
+      document.body.classList.add('shot');
+      localStorage.clear();
+      await loadFrame(appUrl());
+      // 无头浏览器 + 虚拟时间下 CSS 过渡不会推进，截图前冻结动画以拿到稳定的终态
+      var freeze = frame.contentWindow.document.createElement('style');
+      freeze.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}';
+      frame.contentWindow.document.head.appendChild(freeze);
+      await wait(300);
+
+      if (name === 'initial') {
+        // 干净的初始状态：什么都不做
+      } else if (name === 'running') {
+        $('#toggleBtn').click();
+        fastForward(9 * 60 * 1000);
+      } else if (name === 'break') {
+        $('#toggleBtn').click();
+        await wait(300);
+        fastForward(26 * 60 * 1000); // 第 1 个番茄结束 → 自动进入短休息
+        await wait(900);
+        fastForward(90 * 1000);      // 休息进行中
+      } else if (name === 'settings') {
+        $('#toggleBtn').click();
+        fastForward(7 * 60 * 1000);
+        await wait(400);
+        $('#settingsBtn').click();
+      }
+      await wait(800);
+      var s = snapshot();
+      document.title = 'scenario=' + name + ' phase=' + s.phase + ' time=' + s.time + ' count=' + s.count;
+      window.__selftest.done = true;
+      window.__selftest.snapshot = s;
+    }
+
+    /* ------------------------------------------------------------ 主流程 -- */
+
+    async function run() {
+      if (scenario) return screenshotScenario(scenario);
+
+      localStorage.clear();
+      await loadFrame(appUrl());
+
+      section('初始状态');
+      var s = snapshot();
+      check('显示 25:00', s.time === '25:00', s.time);
+      check('渲染 4 个周期圆点', s.dots === 4, String(s.dots));
+      check('每个圆点都未填充', s.filled === 0, String(s.filled));
+      check('专注模式被选中', s.phase === 'focus' && s.label === '专注时间', s.label);
+      check('默认未在计时', s.running === false && s.toggleText === '开始', s.toggleText);
+      check('圆环为满环', Math.abs(s.ringOffset) < 1, String(s.ringOffset));
+      check('圆环周长按 r=142 计算（约 892）', s.circumference > 880 && s.circumference < 900, String(s.circumference));
+      check('今日番茄数为 0', s.count === '0', s.count);
+      check('初始不写入 localStorage', localStorage.getItem(STORAGE_KEY) === null);
+
+      section('开始 / 暂停');
+      $('#toggleBtn').click();
+      await wait(300);
+      fastForward(1000);
+      await wait(800);
+      var r = snapshot();
+      check('body 进入 is-running', r.running === true);
+      check('主按钮变为「暂停」', r.toggleText === '暂停', r.toggleText);
+      check('倒计时在走（25:00 → 24:59）', r.time === '24:59', r.time);
+      check('标签页标题带倒计时', /^\d{2}:\d{2} · 专注时间/.test(r.title), r.title);
+      check('圆环刚开始收缩', r.ringOffset > 0 && r.ringOffset < 2, String(r.ringOffset));
+
+      fastForward(5 * 60 * 1000);
+      await wait(900);
+      var r2 = snapshot();
+      check('快进 5 分钟后剩余约 20 分钟', r2.time === '19:59' || r2.time === '19:58', r2.time);
+      check('圆环按进度收缩到约 179px', Math.abs(r2.ringOffset - 179) < 6, String(r2.ringOffset));
+
+      $('#toggleBtn').click();
+      await wait(300);
+      var frozen = snapshot();
+      await wait(1500);           // 暂停期间虚拟时间继续走
+      var stillFrozen = snapshot();
+      check('再次点击进入暂停', frozen.running === false && frozen.toggleText === '开始', frozen.toggleText);
+      check('暂停后剩余时间被冻结', frozen.time === stillFrozen.time, frozen.time + ' vs ' + stillFrozen.time);
+      check('暂停状态已写入 localStorage', JSON.parse(localStorage.getItem(STORAGE_KEY)).timer.running === false);
+
+      section('第一个番茄结束');
+      $('#toggleBtn').click();
+      await wait(300);
+      fastForward(26 * 60 * 1000);
+      await wait(1200);
+      var f = snapshot();
+      check('切换到短休息', f.phase === 'short' && f.label === '短休息', f.label);
+      check('今日番茄数 +1', f.count === '1', f.count);
+      check('周期圆点填充 1 个', f.filled === 1, String(f.filled));
+      check('弹出结束提示', f.toastVisible && f.toast.indexOf('专注时间结束') !== -1, f.toast);
+      check('默认自动开始休息', f.running === true, String(f.running));
+      check('休息倒计时为 05:00 附近', /^0[45]:/.test(f.time), f.time);
+
+      section('键盘快捷键');
+      frame.contentWindow.document.activeElement && frame.contentWindow.document.activeElement.blur();
+      pressKey('s', 'KeyS', 83);
+      await wait(400);
+      var k = snapshot();
+      check('S 跳回专注', k.phase === 'focus', k.phase);
+      check('跳过会暂停计时', k.running === false);
+      check('跳过不计入番茄数', k.count === '1', k.count);
+      check('跳过恢复完整时长', k.time === '25:00', k.time);
+
+      pressKey('2', 'Digit2', 50);
+      await wait(300);
+      check('数字键 2 切到短休息', snapshot().phase === 'short', snapshot().phase);
+      pressKey('3', 'Digit3', 51);
+      await wait(300);
+      check('数字键 3 切到长休息', snapshot().phase === 'long', snapshot().phase);
+      pressKey('1', 'Digit1', 49);
+      await wait(300);
+      check('数字键 1 切回专注', snapshot().phase === 'focus', snapshot().phase);
+
+      fastForward(30 * 1000);
+      await wait(800);
+      check('切回后确实走了一点', snapshot().phase === 'focus');
+      pressKey('r', 'KeyR', 82);
+      await wait(300);
+      check('R 重置当前阶段为 25:00', snapshot().time === '25:00', snapshot().time);
+
+      section('设置面板');
+      $('#settingsBtn').click();
+      await wait(600);
+      var panelState = {
+        hidden: $('#settingsPanel').hidden,
+        open: $('#settingsPanel').classList.contains('is-open'),
+        expanded: $('#settingsBtn').getAttribute('aria-expanded'),
+        focusMin: $('#focusMinutes').value,
+        interval: $('#longBreakInterval').value,
+        autoBreak: $('#autoStartBreaks').checked,
+        focused: frame.contentWindow.document.activeElement.id
+      };
+      check('面板已显示并有入场动画类', panelState.hidden === false && panelState.open === true);
+      check('aria-expanded 同步为 true', panelState.expanded === 'true', panelState.expanded);
+      check('表单回填当前设置',
+        panelState.focusMin === '25' && panelState.interval === '4' && panelState.autoBreak === true,
+        JSON.stringify(panelState));
+      check('打开后焦点落入面板', panelState.focused === 'focusMinutes', panelState.focused);
+
+      $('#focusMinutes').value = '1';
+      fire('#focusMinutes', 'change');
+      await wait(400);
+      check('改专注时长后表盘同步为 01:00', snapshot().time === '01:00', snapshot().time);
+
+      $('#focusMinutes').value = '999';      // 越界应被收敛到 180
+      fire('#focusMinutes', 'change');
+      await wait(300);
+      check('越界输入被收敛到 180 且在表单里回写', $('#focusMinutes').value === '180', $('#focusMinutes').value);
+
+      $('#focusMinutes').value = '1';
+      fire('#focusMinutes', 'change');
+      await wait(300);
+
+      $('#autoStartBreaks').checked = false;
+      fire('#autoStartBreaks', 'change');
+      await wait(300);
+
+      var stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      check('设置写入 localStorage',
+        stored && stored.settings.focusMinutes === 1 && stored.settings.autoStartBreaks === false,
+        JSON.stringify(stored && stored.settings));
+
+      pressKey('Escape', 'Escape', 27);
+      await wait(500);
+      check('Esc 关闭设置面板', $('#settingsPanel').hidden === true);
+      check('关闭后焦点回到设置按钮',
+        frame.contentWindow.document.activeElement.id === 'settingsBtn',
+        frame.contentWindow.document.activeElement.id);
+
+      $('#taskInput').value = '写周报 · 第 3 章';
+      fire('#taskInput', 'input');
+      await wait(300);
+
+      section('刷新页面后的恢复');
+      await loadFrame(appUrl('reload=1'));
+      var rl = snapshot();
+      check('今日番茄数被保留', rl.count === '1', rl.count);
+      check('周期进度被保留（1/4）', rl.filled === 1 && rl.dots === 4, rl.filled + '/' + rl.dots);
+      check('恢复为自定义时长', rl.phase === 'focus' && rl.time === '01:00', rl.time);
+      check('恢复后不自动计时', rl.running === false);
+      check('本轮目标内容被保留', $('#taskInput').value === '写周报 · 第 3 章', $('#taskInput').value);
+
+      section('关闭自动开始后的阶段切换');
+      $('#toggleBtn').click();
+      await wait(300);
+      fastForward(2 * 60 * 1000);
+      await wait(1200);
+      var nb = snapshot();
+      check('1 分钟专注结束后进入短休息', nb.phase === 'short', nb.phase);
+      check('未自动开始（设置已关闭）', nb.running === false && nb.toggleText === '开始', nb.toggleText);
+      check('今日番茄数变为 2', nb.count === '2', nb.count);
+
+      section('长休息规则（每 4 个番茄）');
+      var s3 = await completeCurrentPhase(5);   // 完成短休息 → 回到专注
+      check('短休息结束后回到专注', s3.phase === 'focus' && s3.running === false, s3.phase + '/' + s3.running);
+      var s4 = await completeCurrentPhase(1);   // 第 3 个番茄
+      check('第 3 个番茄后仍是短休息', s4.phase === 'short', s4.phase);
+      check('今日番茄数为 3', s4.count === '3', s4.count);
+      await completeCurrentPhase(5);            // 完成短休息
+      var s5 = await completeCurrentPhase(1);   // 第 4 个番茄
+      check('第 4 个番茄后进入长休息', s5.phase === 'long', s5.phase);
+      check('今日番茄数为 4', s5.count === '4', s5.count);
+      check('周期圆点全部填满', s5.filled === 4, String(s5.filled));
+      check('长休息时长为 15 分钟', s5.time === '15:00', s5.time);
+
+      section('恢复默认设置');
+      $('#settingsBtn').click();
+      await wait(500);
+      $('#restoreDefaultsBtn').click();
+      await wait(500);
+      check('恢复默认后专注时长为 25', $('#focusMinutes').value === '25', $('#focusMinutes').value);
+      check('恢复默认后自动开始休息重新开启', $('#autoStartBreaks').checked === true);
+      $('#closeSettingsBtn').click();
+      await wait(500);
+      check('关闭按钮也能关闭面板', $('#settingsPanel').hidden === true);
+      check('长休息默认 15:00 已生效', snapshot().time === '15:00', snapshot().time);
+
+      section('统计清零');
+      frame.contentWindow.confirm = function () { return true; };
+      $('#settingsBtn').click();
+      await wait(500);
+      $('#resetStatsBtn').click();
+      await wait(500);
+      check('番茄总数清零', snapshot().count === '0', snapshot().count);
+      check('周期圆点清零', snapshot().filled === 0, String(snapshot().filled));
+    }
+
+    emit('被测文件：' + APP_FILE);
+
+    run()
+      .catch(function (err) {
+        check('自检脚本未抛错', false, err && (err.stack || err.message || String(err)));
+      })
+      .then(function () {
+        emit('\n' + (fail === 0 ? '\u2705 SUMMARY PASS' : '\u274c SUMMARY FAIL') +
+          ' pass=' + pass + ' fail=' + fail + ' tests=' + (pass + fail),
+          'summary ' + (fail === 0 ? 'ok' : 'bad'));
+        window.__selftest.pass = pass;
+        window.__selftest.fail = fail;
+        window.__selftest.summary = 'pass=' + pass + ' fail=' + fail;
+        window.__selftest.done = true;
+      });
+  })();
+  </script>
+</body>
+</html>

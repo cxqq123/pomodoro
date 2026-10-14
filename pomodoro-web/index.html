@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#141018" />
+  <meta name="description" content="一个干净、专注的番茄时钟：专注 25 分钟，休息 5 分钟，自动循环并记录你的番茄数。" />
+  <title>番茄时钟 · Pomodoro</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%85%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-phase="focus">
+  <div class="glow" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <h1 class="brand">
+        <span class="brand__tomato" aria-hidden="true">🍅</span>
+        <span class="brand__text">番茄时钟</span>
+      </h1>
+      <button type="button" id="settingsBtn" class="icon-btn" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.7 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.7h.09A1.7 1.7 0 0 0 10.12 3.14V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.15 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <nav class="modes" role="tablist" aria-label="计时模式">
+      <button type="button" class="mode" role="tab" data-phase="focus" aria-selected="true">专注</button>
+      <button type="button" class="mode" role="tab" data-phase="short" aria-selected="false">短休息</button>
+      <button type="button" class="mode" role="tab" data-phase="long" aria-selected="false">长休息</button>
+    </nav>
+
+    <main class="stage">
+      <div class="dial">
+        <svg class="ring" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" />
+              <stop offset="100%" stop-color="var(--accent-2)" />
+            </linearGradient>
+          </defs>
+          <!-- fill="none" 作为表现属性写死：万一样式表没加载，也不会退化成一个黑色实心圆 -->
+          <circle class="ring__track" cx="160" cy="160" r="142" fill="none"></circle>
+          <circle class="ring__progress" id="ringProgress" cx="160" cy="160" r="142" fill="none"></circle>
+        </svg>
+
+        <div class="dial__center">
+          <p class="dial__phase" id="phaseLabel">专注时间</p>
+          <p class="dial__time" id="timeDisplay" role="timer" aria-live="off">25:00</p>
+          <p class="dial__hint" id="phaseHint">该专注了</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" id="resetBtn" class="icon-btn icon-btn--ghost" aria-label="重置当前阶段（快捷键 R）">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 3.2-6.9"></path>
+            <path d="M3 4.5V10h5.5"></path>
+          </svg>
+        </button>
+
+        <button type="button" id="toggleBtn" class="primary-btn" aria-label="开始专注（快捷键 空格）">
+          <svg class="primary-btn__icon primary-btn__icon--play" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="currentColor">
+            <path d="M8 5.2c0-.9 1-1.5 1.8-1L18 11a1.2 1.2 0 0 1 0 2l-8.2 6.8c-.8.5-1.8-.1-1.8-1z"></path>
+          </svg>
+          <svg class="primary-btn__icon primary-btn__icon--pause" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="currentColor">
+            <rect x="7" y="5" width="3.6" height="14" rx="1.6"></rect>
+            <rect x="13.4" y="5" width="3.6" height="14" rx="1.6"></rect>
+          </svg>
+          <span class="primary-btn__text" id="toggleText">开始</span>
+        </button>
+
+        <button type="button" id="skipBtn" class="icon-btn icon-btn--ghost" aria-label="跳过当前阶段（快捷键 S）">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 5.5 13 12l-8 6.5z" fill="currentColor" stroke="none"></path>
+            <path d="M18 5v14"></path>
+          </svg>
+        </button>
+      </div>
+    </main>
+
+    <section class="meta" aria-label="进度">
+      <div class="meta__row">
+        <div class="dots" id="dots" role="img" aria-label="本周期番茄进度"></div>
+        <p class="meta__count">今天完成 <strong id="focusCount">0</strong> 个番茄</p>
+      </div>
+      <label class="task">
+        <span class="task__label">本轮目标</span>
+        <input type="text" id="taskInput" class="task__input" maxlength="60" placeholder="例如：写周报 / 复习第 3 章" autocomplete="off" />
+      </label>
+    </section>
+
+    <footer class="shortcuts">
+      <kbd>空格</kbd> 开始/暂停
+      <span class="shortcuts__sep">·</span>
+      <kbd>R</kbd> 重置
+      <span class="shortcuts__sep">·</span>
+      <kbd>S</kbd> 跳过
+      <span class="shortcuts__sep">·</span>
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 切换模式
+    </footer>
+  </div>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <section class="panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <header class="panel__head">
+      <h2 id="settingsTitle">设置</h2>
+      <button type="button" id="closeSettingsBtn" class="icon-btn icon-btn--ghost" aria-label="关闭设置">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+    </header>
+
+    <form class="panel__body" id="settingsForm">
+      <fieldset class="field-group">
+        <legend>时长（分钟）</legend>
+        <div class="grid-3">
+          <label class="field">
+            <span>专注</span>
+            <input type="number" id="focusMinutes" min="1" max="180" step="1" inputmode="numeric" />
+          </label>
+          <label class="field">
+            <span>短休息</span>
+            <input type="number" id="shortMinutes" min="1" max="60" step="1" inputmode="numeric" />
+          </label>
+          <label class="field">
+            <span>长休息</span>
+            <input type="number" id="longMinutes" min="1" max="120" step="1" inputmode="numeric" />
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="field field--row">
+        <span>长休息间隔<small>每完成几个番茄后长休息</small></span>
+        <input type="number" id="longBreakInterval" min="1" max="12" step="1" inputmode="numeric" />
+      </label>
+
+      <div class="switches">
+        <label class="switch">
+          <input type="checkbox" id="autoStartBreaks" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">专注结束后自动开始休息</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="autoStartFocus" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">休息结束后自动开始专注</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="soundEnabled" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">阶段结束提示音</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="notifyEnabled" />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="switch__text">桌面通知<small id="notifyHint"></small></span>
+        </label>
+      </div>
+
+      <div class="panel__actions">
+        <button type="button" class="text-btn" id="resetStatsBtn">清空统计</button>
+        <button type="button" class="text-btn text-btn--accent" id="restoreDefaultsBtn">恢复默认</button>
+      </div>
+      <p class="panel__note">所有设置与进度只保存在这台设备的浏览器里，不会上传。</p>
+    </form>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="timer-core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
