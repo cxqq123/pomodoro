@@ -1,11 +1,12 @@
 # 番茄时钟 Pomodoro
 
-两个番茄工作法计时器的实现，同一套功能设计：
+三个番茄工作法计时器的实现，同一套功能设计与核心架构：
 
 | 目录 | 实现 | 技术栈 |
 | --- | --- | --- |
 | [pomodoro-web](pomodoro-web/) | 网页版 | 零依赖纯前端，双击即用，可离线 |
 | [pomodoro-ios](pomodoro-ios/) | iOS 原生 App | SwiftUI，含 XCTest 单元测试 |
+| [pomodoro-android](pomodoro-android/) | Android 原生 App | Kotlin + Jetpack Compose，含 JUnit 单元测试 |
 
 ## 功能
 

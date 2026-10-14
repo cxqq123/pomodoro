@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# 极简 wrapper 脚本：直接用缓存的 gradle-9.4.1（GRADLE_USER_HOME 已重定向到 android-tools/gradle-home）
+GRADLE_HOME="/Users/mico/.gradle/wrapper/dists/gradle-9.4.1-bin/arn2x92ynaizyzdaamcbpbhtj/gradle-9.4.1"
+exec "$GRADLE_HOME/bin/gradle" "$@"
